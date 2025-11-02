@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biconnected Components Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 0;
+        }
+        
+        .sidebar {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 2px solid #e0e0e0;
+        }
+        
+        .main {
+            padding: 30px;
+        }
+        
+        .controls {
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .legend {
+            margin-top: 30px;
+        }
+        
+        .legend h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 2px solid #333;
+        }
+        
+        .legend-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid #333;
+        }
+        
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .info-box h3 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+        
+        .info-box ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .results h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .result-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Biconnected Components Visualizer</h1>
+            <p>Visualizing Articulation Points and Bridges using DFS</p>
+        </div>
+        
+        <div class="content">
+            <div class="sidebar">
+                <div class="controls">
+                    <h3 style="margin-bottom: 15px; color: #333;">Controls</h3>
+                    <button class="btn btn-primary" onclick="runDFS()">Run DFS Analysis</button>
+                    <button class="btn btn-secondary" onclick="resetGraph()">Reset Graph</button>
+                    <button class="btn btn-secondary" onclick="generateNewGraph()">New Random Graph</button>
+                </div>
+                
+                <div class="legend">
+                    <h3>Legend</h3>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #333;"></div>
+                        <span>Tree Edge</span>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #FF9800;"></div>
+                        <span>Back Edge</span>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #F44336;"></div>
+                        <span>Bridge</span>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="legend-circle" style="background: #4CAF50;"></div>
+                        <span>Normal Vertex</span>
+                    </div>
+                    
+                    <div class="legend-item">
+                        <div class="legend-circle" style="background: #F44336;"></div>
+                        <span>Articulation Point</span>
+                    </div>
+                </div>
+                
+                <div class="info-box" style="margin-top: 30px;">
+                    <h3>How it works:</h3>
+                    <ul>
+                        <li>Black edges = DFS Tree</li>
+                        <li>Orange edges = Back edges (shortcuts)</li>
+                        <li>Red edges = Bridges (critical connections)</li>
+                        <li>Red vertices = Articulation points (critical nodes)</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="main">
+                <canvas id="graphCanvas" width="900" height="700"></canvas>
+                
+                <div class="results" id="results" style="display: none;">
+                    <h3>Analysis Results:</h3>
+                    <div id="resultContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('graphCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Graph structure
+        let graph = {
+            vertices: [],
+            edges: [],
+            adjList: {}
+        };
+        
+        let dfsResults = {
+            treeEdges: [],
+            backEdges: [],
+            articulationPoints: [],
+            bridges: [],
+            discoveryTime: {},
+            lowValue: {},
+            parent: {}
+        };
+        
+        let analyzed = false;
+        
+        // Initialize with a sample graph
+        function initGraph() {
+            graph.vertices = [
+                {id: 0, x: 150, y: 150, label: 'A'},
+                {id: 1, x: 350, y: 150, label: 'B'},
+                {id: 2, x: 550, y: 150, label: 'C'},
+                {id: 3, x: 750, y: 150, label: 'D'},
+                {id: 4, x: 250, y: 350, label: 'E'},
+                {id: 5, x: 450, y: 350, label: 'F'},
+                {id: 6, x: 650, y: 350, label: 'G'},
+                {id: 7, x: 350, y: 550, label: 'H'}
+            ];
+            
+            graph.edges = [
+                {from: 0, to: 1},
+                {from: 1, to: 2},
+                {from: 2, to: 3},
+                {from: 1, to: 4},
+                {from: 1, to: 5},
+                {from: 4, to: 5},
+                {from: 2, to: 6},
+                {from: 5, to: 6},
+                {from: 4, to: 7},
+                {from: 5, to: 7}
+            ];
+            
+            buildAdjList();
+            drawGraph();
+        }
+        
+        function buildAdjList() {
+            graph.adjList = {};
+            graph.vertices.forEach(v => {
+                graph.adjList[v.id] = [];
+            });
+            
+            graph.edges.forEach(edge => {
+                graph.adjList[edge.from].push(edge.to);
+                graph.adjList[edge.to].push(edge.from);
+            });
+        }
+        
+        function drawGraph() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw edges
+            graph.edges.forEach(edge => {
+                const from = graph.vertices[edge.from];
+                const to = graph.vertices[edge.to];
+                
+                let color = '#999';
+                let width = 2;
+                
+                if (analyzed) {
+                    const edgeKey1 = `${edge.from}-${edge.to}`;
+                    const edgeKey2 = `${edge.to}-${edge.from}`;
+                    
+                    if (dfsResults.bridges.includes(edgeKey1) || dfsResults.bridges.includes(edgeKey2)) {
+                        color = '#F44336';
+                        width = 4;
+                    } else if (dfsResults.treeEdges.includes(edgeKey1) || dfsResults.treeEdges.includes(edgeKey2)) {
+                        color = '#333';
+                        width = 3;
+                    } else if (dfsResults.backEdges.includes(edgeKey1) || dfsResults.backEdges.includes(edgeKey2)) {
+                        color = '#FF9800';
+                        width = 3;
+                    }
+                }
+                
+                ctx.beginPath();
+                ctx.moveTo(from.x, from.y);
+                ctx.lineTo(to.x, to.y);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width;
+                ctx.stroke();
+            });
+            
+            // Draw vertices
+            graph.vertices.forEach(v => {
+                let color = '#4CAF50';
+                if (analyzed && dfsResults.articulationPoints.includes(v.id)) {
+                    color = '#F44336';
+                }
+                
+                ctx.beginPath();
+                ctx.arc(v.x, v.y, 25, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(v.label, v.x, v.y);
+            });
+        }
+        
+        function runDFS() {
+            dfsResults = {
+                treeEdges: [],
+                backEdges: [],
+                articulationPoints: [],
+                bridges: [],
+                discoveryTime: {},
+                lowValue: {},
+                parent: {}
+            };
+            
+            let time = 0;
+            const visited = {};
+            
+            function dfs(u, parent) {
+                visited[u] = true;
+                dfsResults.discoveryTime[u] = dfsResults.lowValue[u] = time++;
+                let children = 0;
+                
+                graph.adjList[u].forEach(v => {
+                    if (!visited[v]) {
+                        children++;
+                        dfsResults.parent[v] = u;
+                        dfsResults.treeEdges.push(`${u}-${v}`);
+                        
+                        dfs(v, u);
+                        
+                        dfsResults.lowValue[u] = Math.min(dfsResults.lowValue[u], dfsResults.lowValue[v]);
+                        
+                        // Check for articulation point
+                        if (parent === null && children > 1) {
+                            dfsResults.articulationPoints.push(u);
+                        }
+                        if (parent !== null && dfsResults.lowValue[v] >= dfsResults.discoveryTime[u]) {
+                            if (!dfsResults.articulationPoints.includes(u)) {
+                                dfsResults.articulationPoints.push(u);
+                            }
+                        }
+                        
+                        // Check for bridge
+                        if (dfsResults.lowValue[v] > dfsResults.discoveryTime[u]) {
+                            dfsResults.bridges.push(`${u}-${v}`);
+                        }
+                    } else if (v !== parent) {
+                        dfsResults.lowValue[u] = Math.min(dfsResults.lowValue[u], dfsResults.discoveryTime[v]);
+                        dfsResults.backEdges.push(`${u}-${v}`);
+                    }
+                });
+            }
+            
+            // Start DFS from vertex 0
+            dfs(0, null);
+            
+            analyzed = true;
+            drawGraph();
+            displayResults();
+        }
+        
+        function displayResults() {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultContent');
+            
+            let html = '';
+            
+            html += `<div class="result-item"><strong>Articulation Points:</strong> `;
+            if (dfsResults.articulationPoints.length === 0) {
+                html += 'None found';
+            } else {
+                html += dfsResults.articulationPoints.map(id => graph.vertices[id].label).join(', ');
+            }
+            html += '</div>';
+            
+            html += `<div class="result-item"><strong>Bridges:</strong> `;
+            if (dfsResults.bridges.length === 0) {
+                html += 'None found';
+            } else {
+                html += dfsResults.bridges.map(edge => {
+                    const [from, to] = edge.split('-');
+                    return `${graph.vertices[from].label}-${graph.vertices[to].label}`;
+                }).join(', ');
+            }
+            html += '</div>';
+            
+            html += `<div class="result-item"><strong>Tree Edges:</strong> ${dfsResults.treeEdges.length}</div>`;
+            html += `<div class="result-item"><strong>Back Edges:</strong> ${dfsResults.backEdges.length}</div>`;
+            
+            contentDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+        }
+        
+        function resetGraph() {
+            analyzed = false;
+            document.getElementById('results').style.display = 'none';
+            drawGraph();
+        }
+        
+        function generateNewGraph() {
+            const numVertices = 6 + Math.floor(Math.random() * 4);
+            graph.vertices = [];
+            graph.edges = [];
+            
+            const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 250;
+            
+            for (let i = 0; i < numVertices; i++) {
+                const angle = (i / numVertices) * 2 * Math.PI;
+                graph.vertices.push({
+                    id: i,
+                    x: centerX + radius * Math.cos(angle),
+                    y: centerY + radius * Math.sin(angle),
+                    label: labels[i]
+                });
+            }
+            
+            // Create a connected graph
+            for (let i = 0; i < numVertices - 1; i++) {
+                graph.edges.push({from: i, to: i + 1});
+            }
+            
+            // Add random edges
+            const extraEdges = Math.floor(Math.random() * (numVertices - 2)) + 2;
+            for (let i = 0; i < extraEdges; i++) {
+                let from = Math.floor(Math.random() * numVertices);
+                let to = Math.floor(Math.random() * numVertices);
+                
+                if (from !== to && !graph.edges.some(e => 
+                    (e.from === from && e.to === to) || (e.from === to && e.to === from))) {
+                    graph.edges.push({from, to});
+                }
+            }
+            
+            buildAdjList();
+            analyzed = false;
+            document.getElementById('results').style.display = 'none';
+            drawGraph();
+        }
+        
+        // Initialize
+        initGraph();
+    </script>
+</body>
+</html>
